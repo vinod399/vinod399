@@ -1,0 +1,31 @@
+import requests
+import urllib3
+from lxml import html
+import mysql.connector
+
+mydb = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    passwd="",
+    database="mydatabase"
+)
+mycursor = mydb.cursor()
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from datetime import datetime,timedelta
+start_url = "https://in.finance.yahoo.com/quote/HINDUNILVR.NS?p=HINDUNILVR.NS"
+start = datetime(2020,1,30)
+for _ in range(15):
+    url = start_url.format(start.strftime("%Y%m%d"))
+    start -= timedelta(days=1)
+    page = requests.get(url)
+    tree = html.fromstring(page.content)
+    price = tree.xpath('//*[@id="quote-summary"]/div[1]/table/tbody/tr[1]/td[2]/span/text()')
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    current_date = str(datetime.now().strftime('%Y-%m-%d'))
+    sql = "INSERT INTO shareprice (price,time,date)VALUES(%s,%s,%s)"
+    val = (str(price),str(current_time),str(current_date))
+    mycursor.execute(sql, val)
+    mydb.commit()
+    print(price,current_time)
